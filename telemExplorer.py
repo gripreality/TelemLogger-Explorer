@@ -4,9 +4,9 @@ import gzip
 import os
 import csv
 from datetime import datetime
-from pathlib import Path
 from fastkml import kml, styles
 from fastkml.geometry import LineString, Point
+from pathlib import Path
 
 import glob
 
@@ -16,6 +16,26 @@ def find_dlog_files(folder_path):
     """
     dlog_files = glob.glob(folder_path + '/*.dlog')
     return dlog_files
+
+def unzip_files(folder_path):
+    """
+    Given a folder path, unzips all *.gz files in the folder to a folder with the name of the first file in the folder
+    without the extension.
+    """
+    # Get a list of all *.gz files in the folder
+    gz_files = [file for file in os.listdir(folder_path) if file.endswith('.gz')]
+
+    # Create the output folder with the name of the first file in the folder (without the extension)
+    output_folder = Path(folder_path) / Path(gz_files[0]).stem.replace('.dlog', '')
+    output_folder.mkdir(parents=True, exist_ok=True)
+
+    # Unzip each file to the output folder
+    for gz_file in gz_files:
+        input_file = Path(folder_path) / gz_file
+        output_file = output_folder / Path(gz_file).stem
+
+        with gzip.open(input_file, 'rb') as f_in, open(output_file, 'wb') as f_out:
+            f_out.write(f_in.read())
 
 def combine_json_files(file_list):
     """
@@ -116,13 +136,15 @@ def export_kml(data, filename, downsample=0, add_placemarks=True, placemark_down
         kml_file.write(k.to_string(prettyprint=True))
 
 
-dlog_files_list = find_dlog_files("tcData")
-combined_json = combine_json_files(dlog_files_list)
+unzip_files("compData")
 
-json_data = combined_json  # your combined JSON data here
-output = json_data
+#dlog_files_list = find_dlog_files("tcData")
+#combined_json = combine_json_files(dlog_files_list)
+
+#json_data = combined_json  # your combined JSON data here
+#output = json_data
 
 #export_kml(output, "driveData.kml", downsample=10, add_placemarks=True, placemark_downsample=30)
 
-csv_file = 'output.csv'  # path to the CSV file you want to create
-write_json_to_csv(json_data, csv_file, downsample=0) # Write the CSV
+#csv_file = 'output.csv'  # path to the CSV file you want to create
+#write_json_to_csv(json_data, csv_file, downsample=0) # Write the CSV
