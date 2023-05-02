@@ -7,8 +7,9 @@ from datetime import datetime
 from fastkml import kml, styles
 from fastkml.geometry import LineString, Point
 from pathlib import Path
-
 import glob
+import tkinter as tk
+from tkinter import filedialog, messagebox
 
 def find_dlog_files(folder_path):
     """
@@ -135,8 +136,125 @@ def export_kml(data, filename, downsample=0, add_placemarks=True, placemark_down
     with open(filename, 'w') as kml_file:
         kml_file.write(k.to_string(prettyprint=True))
 
+class Application(tk.Frame):
+    def __init__(self, master=None):
+        super().__init__(master)
+        self.master = master
+        self.pack()
+        self.create_widgets()
 
-unzip_files("compData")
+    def create_widgets(self):
+        self.select_folder_button = tk.Button(self, text="Select Folder", command=self.select_folder)
+        self.select_folder_button.pack(side="left")
+
+        self.unzip_files_button = tk.Button(self, text="Unzip Files", command=self.unzip_files)
+        self.unzip_files_button.pack(side="left")
+
+        self.refresh_data_button = tk.Button(self, text="Refresh Data", command=self.refresh_data)
+        self.refresh_data_button.pack(side="left")
+
+        self.export_csv_button = tk.Button(self, text="Export CSV", command=self.export_csv)
+        self.export_csv_button.pack(side="left")
+
+        self.export_kml_button = tk.Button(self, text="Export KML", command=self.export_kml)
+        self.export_kml_button.pack(side="left")
+
+        self.from_time_label = tk.Label(self, text="From Timecode:")
+        self.from_time_label.pack(side="left")
+        self.from_time_entry = tk.Entry(self)
+        self.from_time_entry.pack(side="left")
+
+        self.to_time_label = tk.Label(self, text="To Timecode:")
+        self.to_time_label.pack(side="left")
+        self.to_time_entry = tk.Entry(self)
+        self.to_time_entry.pack(side="left")
+
+        self.tc_info_label = tk.Label(self, text="")
+        self.tc_info_label.pack(side="left")
+
+        self.quit_button = tk.Button(self, text="Quit", fg="red", command=self.master.destroy)
+        self.quit_button.pack(side="right")
+
+    def select_folder(self):
+        folder_path = filedialog.askdirectory()
+        if folder_path:
+            self.folder_path = folder_path
+            messagebox.showinfo("Folder Selected", f"Selected folder: {self.folder_path}")
+
+    def unzip_files(self):
+        if not hasattr(self, 'folder_path'):
+            messagebox.showwarning("Folder Not Selected", "Please select a folder first.")
+            return
+
+        unzip_files(self.folder_path)
+        messagebox.showinfo("Files Unzipped", f"Files unzipped to: {self.folder_path}")
+
+    def refresh_data(self):
+        if not hasattr(self, 'folder_path'):
+            messagebox.showwarning("Folder Not Selected", "Please select a folder first.")
+            return
+
+        dlog_files_list = find_dlog_files(self.folder_path)
+        combined_json = combine_json_files(dlog_files_list)
+
+        # Display first and last timecodes if "tc" exists in the dataset
+        timecodes = [entry['tc'] for entry in combined_json if 'tc' in entry]
+        if timecodes:
+            self.tc_info_label.config(text=f"First TC: {timecodes[0]}, Last TC: {timecodes[-1]}")
+        else:
+            self.tc_info_label.config(text="No timecode data in dataset")
+
+        messagebox.showinfo("Data Refreshed", "Dataset refreshed.")
+
+
+    def export_csv(self):
+        if not hasattr(self, 'folder_path'):
+            messagebox.showwarning("Folder Not Selected", "Please select a folder first.")
+            return
+
+        dlog_files_list = find_dlog_files(self.folder_path)
+        combined_json = combine_json_files(dlog_files_list)
+
+        csv_file = filedialog.asksaveasfilename(defaultextension=".csv")
+        if csv_file:
+            from_time = self.from_time_entry.get()
+            to_time = self.to_time_entry.get()
+            filtered_data = filter_data(combined_json, from_time, to_time)
+            write_json_to_csv(filtered_data, csv_file, downsample=0)
+            messagebox.showinfo("CSV Exported", f"CSV file exported to: {csv_file}")
+
+    def export_kml(self):
+        if not hasattr(self, 'folder_path'):
+            messagebox.showwarning("Folder Not Selected", "Please select a folder first.")
+            return
+
+        dlog_files_list = find_dlog_files(self.folder_path)
+        combined_json = combine_json_files(dlog_files_list)
+
+        kml_file = filedialog.asksaveasfilename(defaultextension=".kml")
+        if kml_file:
+            from_time = self.from_time_entry.get()
+            to_time = self.to_time_entry.get()
+            filtered_data = filter_data(combined_json, from_time, to_time)
+            downsample = int(input("Enter a downsample factor for the KML output: "))
+            placemark_downsample = int(input("Enter a downsample factor for the Placemark objects in the KML output: "))
+            add_placemarks = messagebox.askyesno("Add Placemarks",
+                                                 "Would you like to add Placemark objects to the KML output?")
+            export_kml(filtered_data, kml_file, downsample=downsample, add_placemarks=add_placemarks,
+                       placemark_downsample=placemark_downsample)
+            messagebox.showinfo("KML Exported", f"KML file exported to: {kml_file}")
+
+    def filter_data(self, data):
+        from_time = self.from_time_entry.get()
+        to_time = self.to_time_entry.get()
+        return filter_data(data, from_time, to_time)
+
+
+root = tk.Tk()
+app = Application(master=root)
+app.mainloop()
+
+#unzip_files("compData")
 
 #dlog_files_list = find_dlog_files("tcData")
 #combined_json = combine_json_files(dlog_files_list)
