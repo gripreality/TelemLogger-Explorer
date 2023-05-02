@@ -140,24 +140,56 @@ class Application(tk.Frame):
     def __init__(self, master=None):
         super().__init__(master)
         self.master = master
-        self.pack()
+        self.master.geometry("1280x720")
+        self.master.minsize(640, 360)
+        self.master.title("TelemLogger Explorer")
+        self.grid(sticky="nsew")
         self.create_widgets()
 
+
+        self.json_data = []
+
     def create_widgets(self):
+        # Instructions
+        self.instructions_text = """Instructions:
+                Click 'Select Folder' to choose a folder containing DLOG files.
+
+                Click 'Unzip Files' to extract the DLOG files from any GZ archives in the selected folder.
+
+                Click 'Refresh Data' to load the data from the DLOG files in the selected folder.
+
+                Use the checkboxes to filter the data that will be exported to CSV and KML files.
+
+                Use the 'CSV Downsample' and 'KML Downsample' fields to reduce the amount of data exported to those formats.
+
+                Use the 'Add Placemarks' and 'Placemark Downsample' fields to configure KML export settings.
+
+                Click 'Export CSV' or 'Export KML' to export the filtered and downsampled data to a file."""
+
+        self.instructions_label = tk.Label(self, text=self.instructions_text, justify="left", anchor="w",
+                                           wraplength=500)
+        self.instructions_label.pack(side="bottom", fill="x")
+
+        # Select Folder
         self.select_folder_button = tk.Button(self, text="Select Folder", command=self.select_folder)
         self.select_folder_button.pack(side="left")
 
-        self.unzip_files_button = tk.Button(self, text="Unzip Files", command=self.unzip_files)
+        self.folder_info_label = tk.Label(self, text="No folder selected")
+        self.folder_info_label.pack(side="left")
+
+        # Unzip Files
+        self.unzip_files_button = tk.Button(self, text="Unzip Files", command=self.unzip_files, state="disabled")
         self.unzip_files_button.pack(side="left")
 
-        self.refresh_data_button = tk.Button(self, text="Refresh Data", command=self.refresh_data)
+        self.file_info_label = tk.Label(self, text="")
+        self.file_info_label.pack(side="left")
+
+        # Refresh Data
+        self.refresh_data_button = tk.Button(self, text="Refresh Data", command=self.refresh_data, state="disabled")
         self.refresh_data_button.pack(side="left")
 
-        self.export_csv_button = tk.Button(self, text="Export CSV", command=self.export_csv)
-        self.export_csv_button.pack(side="left")
-
-        self.export_kml_button = tk.Button(self, text="Export KML", command=self.export_kml)
-        self.export_kml_button.pack(side="left")
+        self.tc_info_label = tk.Label(self, text="")
+        self.tc_info_label.pack(side="left")
 
         self.from_time_label = tk.Label(self, text="From Timecode:")
         self.from_time_label.pack(side="left")
@@ -169,25 +201,81 @@ class Application(tk.Frame):
         self.to_time_entry = tk.Entry(self)
         self.to_time_entry.pack(side="left")
 
-        self.tc_info_label = tk.Label(self, text="")
-        self.tc_info_label.pack(side="left")
+        # Export CSV
+        self.export_csv_button = tk.Button(self, text="Export CSV", command=self.export_csv, state="disabled")
+        self.export_csv_button.pack(side="left")
 
-        self.quit_button = tk.Button(self, text="Quit", fg="red", command=self.master.destroy)
-        self.quit_button.pack(side="right")
+        self.csv_options_frame = tk.Frame(self)
+        self.csv_options_frame.pack(side="left")
+
+        self.csv_downsample_label = tk.Label(self.csv_options_frame, text="CSV Downsample:")
+        self.csv_downsample_label.pack(side="left")
+        self.csv_downsample_entry = tk.Entry(self.csv_options_frame, width=6)
+        self.csv_downsample_entry.pack(side="left")
+        self.csv_downsample_entry.insert(0, "0")
+
+        # Export KML
+        self.export_kml_button = tk.Button(self, text="Export KML", command=self.export_kml, state="disabled")
+        self.export_kml_button.pack(side="left")
+
+        self.kml_options_frame = tk.Frame(self)
+        self.kml_options_frame.pack(side="left")
+
+        self.kml_downsample_label = tk.Label(self.kml_options_frame, text="KML Downsample:")
+        self.kml_downsample_label.pack(side="left")
+        self.kml_downsample_entry = tk.Entry(self.kml_options_frame, width=6)
+        self.kml_downsample_entry.pack(side="left")
+        self.kml_downsample_entry.insert(0, "0")
+
+        # Filter Keys
+        self.filter_keys_frame = tk.Frame(self)
+        self.filter_keys_frame.pack(side="left")
+
+        self.filter_keys_label = tk.Label(self.filter_keys_frame, text="Filter Keys:")
+        self.filter_keys_label.pack()
+
+        self.filter_keys_checkbuttons = {}
+        self.filter_keys_vars = {}
+        self.filter_keys_frame.grid_columnconfigure(0, weight=1)
+        self.filter_keys_frame.grid_columnconfigure(1, weight=1)
 
     def select_folder(self):
-        folder_path = filedialog.askdirectory()
+        folder_path = filedialog.askdirectory(title="Select Folder")
+
         if folder_path:
             self.folder_path = folder_path
-            messagebox.showinfo("Folder Selected", f"Selected folder: {self.folder_path}")
+        self.folder_info_label.config(text="Selected folder: " + folder_path)
+        # Check if there are any *.gz files in the folder
+        if any(file.endswith('.gz') for file in os.listdir(self.folder_path)):
+            self.unzip_files_button.config(state="normal")
+        else:
+            self.unzip_files_button.config(state="disabled")
+
+        # Check if there are any *.dlog files in the folder
+        dlog_files_list = find_dlog_files(self.folder_path)
+        if dlog_files_list:
+            first_file = Path(dlog_files_list[0]).name
+            file_count = len(dlog_files_list)
+            self.file_info_label.config(text=f"First file: {first_file}, File count: {file_count}")
+            self.refresh_data_button.config(state="normal")
+        else:
+            self.file_info_label.config(text="")
+            self.refresh_data_button.config(state="disabled")
 
     def unzip_files(self):
-        if not hasattr(self, 'folder_path'):
-            messagebox.showwarning("Folder Not Selected", "Please select a folder first.")
-            return
-
         unzip_files(self.folder_path)
-        messagebox.showinfo("Files Unzipped", f"Files unzipped to: {self.folder_path}")
+        messagebox.showinfo("Unzip Files", "All *.gz files in the folder have been extracted.")
+
+        # Update file info label
+        dlog_files_list = find_dlog_files(self.folder_path)
+        if dlog_files_list:
+            first_file = Path(dlog_files_list[0]).name
+            file_count = len(dlog_files_list)
+            self.file_info_label.config(text=f"First file: {first_file}, File count: {file_count}")
+            self.refresh_data_button.config(state="normal")
+        else:
+            self.file_info_label.config(text="")
+            self.refresh_data_button.config(state="disabled")
 
     def refresh_data(self):
         if not hasattr(self, 'folder_path'):
@@ -196,6 +284,18 @@ class Application(tk.Frame):
 
         dlog_files_list = find_dlog_files(self.folder_path)
         combined_json = combine_json_files(dlog_files_list)
+        self.json_data = combined_json
+
+        # Update filter keys
+        keys = set()
+        for entry in self.json_data:
+            keys.update(entry.keys())
+        keys.discard('tc')
+        keys = sorted(keys)
+
+        for key in keys:
+            var = tk.BooleanVar(value=True)
+            self.filter_keys_vars[key] = var
 
         # Display first and last timecodes if "tc" exists in the dataset
         timecodes = [entry['tc'] for entry in combined_json if 'tc' in entry]
@@ -204,8 +304,21 @@ class Application(tk.Frame):
         else:
             self.tc_info_label.config(text="No timecode data in dataset")
 
-        messagebox.showinfo("Data Refreshed", "Dataset refreshed.")
+        if combined_json:
+            self.export_csv_button.config(state="normal")
+            self.export_kml_button.config(state="normal")
 
+        # Update filter keys checkbuttons
+        for widget in self.filter_keys_frame.winfo_children():
+            widget.destroy()
+        row = 0
+        for key in keys:
+            cb = tk.Checkbutton(self.filter_keys_frame, text=key, variable=self.filter_keys_vars[key])
+            cb.grid(row=row, column=0, sticky="w")
+            self.filter_keys_checkbuttons[key] = cb
+            row += 1
+
+        messagebox.showinfo("Data Refreshed", "Dataset refreshed.")
 
     def export_csv(self):
         if not hasattr(self, 'folder_path'):
