@@ -140,7 +140,7 @@ class Application(tk.Frame):
     def __init__(self, master=None):
         super().__init__(master)
         self.master = master
-        self.master.title("TelemLogger-Explorer")
+        self.master.title("TelemLogger-Explorer | v1.0")
         self.grid(sticky="nsew")
         self.create_widgets()
 
@@ -164,7 +164,9 @@ class Application(tk.Frame):
 
                 6) Use the 'Add Placemarks' and 'Placemark Downsample' fields to configure KML export settings.
 
-                7) Click 'Export CSV' or 'Export KML' to export the filtered and downsampled data to a file."""
+                7) Click 'Export CSV' or 'Export KML' to export the filtered and downsampled data to a file.
+                
+                Release: v1.0"""
 
         tk.messagebox.showinfo("Help", self.instructions_text)
 
