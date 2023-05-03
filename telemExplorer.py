@@ -136,77 +136,132 @@ def export_kml(data, filename, downsample=0, add_placemarks=True, placemark_down
     with open(filename, 'w') as kml_file:
         kml_file.write(k.to_string(prettyprint=True))
 
+
 class Application(tk.Frame):
+
     def __init__(self, master=None):
         super().__init__(master)
         self.master = master
-        self.master.geometry("1280x720")
         self.master.minsize(640, 360)
-        self.master.title("TelemLogger Explorer")
+        self.master.title("TelemLogger-Explorer")
         self.grid(sticky="nsew")
         self.create_widgets()
 
+        #self.help()
 
         self.json_data = []
 
-    def create_widgets(self):
+    def help(self):
         # Instructions
         self.instructions_text = """Instructions:
-                Click 'Select Folder' to choose a folder containing DLOG files.
 
-                Click 'Unzip Files' to extract the DLOG files from any GZ archives in the selected folder.
+                1) Click 'Select Folder' to choose a folder containing DLOG files.
 
-                Click 'Refresh Data' to load the data from the DLOG files in the selected folder.
+                2) Click 'Unzip Files' to extract the DLOG files from any GZ archives in the selected folder.
 
-                Use the checkboxes to filter the data that will be exported to CSV and KML files.
+                3) Click 'Refresh Data' to load the data from the DLOG files in the selected folder.
 
-                Use the 'CSV Downsample' and 'KML Downsample' fields to reduce the amount of data exported to those formats.
+                4) Use the checkboxes to filter the data that will be exported to CSV and KML files.
 
-                Use the 'Add Placemarks' and 'Placemark Downsample' fields to configure KML export settings.
+                5) Use the 'CSV Downsample' and 'KML Downsample' fields to reduce the amount of data exported to those formats.
 
-                Click 'Export CSV' or 'Export KML' to export the filtered and downsampled data to a file."""
+                6) Use the 'Add Placemarks' and 'Placemark Downsample' fields to configure KML export settings.
 
-        self.instructions_label = tk.Label(self, text=self.instructions_text, justify="left", anchor="w",
-                                           wraplength=500)
-        self.instructions_label.pack(side="bottom", fill="x")
+                7) Click 'Export CSV' or 'Export KML' to export the filtered and downsampled data to a file."""
 
-        # Select Folder
-        self.select_folder_button = tk.Button(self, text="Select Folder", command=self.select_folder)
+        tk.messagebox.showinfo("Help", self.instructions_text)
+
+    def create_widgets(self):
+
+        self.buttons = tk.Frame(self)
+        self.buttons.pack( anchor="w", fill=tk.BOTH)
+
+        # Show Help Button
+        self.help_button = tk.Button(self.buttons, text="Help", command=self.help)
+        self.help_button.pack(side="left")
+
+        # Select Folder Button
+        self.select_folder_button = tk.Button(self.buttons, text="Select Folder", command=self.select_folder)
         self.select_folder_button.pack(side="left")
 
-        self.folder_info_label = tk.Label(self, text="No folder selected")
-        self.folder_info_label.pack(side="left")
-
-        # Unzip Files
-        self.unzip_files_button = tk.Button(self, text="Unzip Files", command=self.unzip_files, state="disabled")
+        # Unzip Files Button
+        self.unzip_files_button = tk.Button(self.buttons, text="Unzip Files", command=self.unzip_files, state="disabled")
         self.unzip_files_button.pack(side="left")
 
-        self.file_info_label = tk.Label(self, text="")
-        self.file_info_label.pack(side="left")
-
-        # Refresh Data
-        self.refresh_data_button = tk.Button(self, text="Refresh Data", command=self.refresh_data, state="disabled")
+        # Refresh Data Button
+        self.refresh_data_button = tk.Button(self.buttons, text="Refresh Data", command=self.refresh_data, state="disabled")
         self.refresh_data_button.pack(side="left")
 
-        self.tc_info_label = tk.Label(self, text="")
-        self.tc_info_label.pack(side="left")
-
-        self.from_time_label = tk.Label(self, text="From Timecode:")
-        self.from_time_label.pack(side="left")
-        self.from_time_entry = tk.Entry(self)
-        self.from_time_entry.pack(side="left")
-
-        self.to_time_label = tk.Label(self, text="To Timecode:")
-        self.to_time_label.pack(side="left")
-        self.to_time_entry = tk.Entry(self)
-        self.to_time_entry.pack(side="left")
-
         # Export CSV
-        self.export_csv_button = tk.Button(self, text="Export CSV", command=self.export_csv, state="disabled")
+        self.export_csv_button = tk.Button(self.buttons, text="Export CSV", command=self.export_csv, state="disabled")
         self.export_csv_button.pack(side="left")
 
-        self.csv_options_frame = tk.Frame(self)
-        self.csv_options_frame.pack(side="left")
+        # Export KML
+        self.export_kml_button = tk.Button(self.buttons, text="Export KML", command=self.export_kml, state="disabled")
+        self.export_kml_button.pack(side="left")
+
+        # Info Frame
+        self.folder_info = tk.Frame(self, padx=20, pady=20, background="#AAA")
+        self.folder_info.pack(anchor="w", fill="x", expand=True)
+
+        # Select Folder Info
+        self.folder_info_label = tk.Label(self.folder_info, text="No folder selected", background="#AAA")
+        self.folder_info_label.pack(anchor="w")
+
+        # Selected File Info
+        self.file_info_label = tk.Label(self.folder_info, text="No files found", background="#AAA")
+        self.file_info_label.pack(anchor="w")
+
+        # TC Info Frame
+
+        self.tc_frame = tk.Frame(self, padx=20, pady=20)
+        self.tc_frame.pack(anchor="w")
+
+        # TC Data
+
+        self.tc_info_label = tk.Label(self.tc_frame, text="TC Filter:")
+        self.tc_info_label.pack(anchor="w")
+
+        # self.from_time_label = tk.Label(self.tc_frame, text="From Timecode:")
+        # self.from_time_label.pack(side="left")
+        # self.from_time_entry = tk.Entry(self.tc_frame)
+        # self.from_time_entry.pack(side="left")
+        #
+        # self.to_time_label = tk.Label(self.tc_frame, text="To Timecode:")
+        # self.to_time_label.pack(side="left")
+        # self.to_time_entry = tk.Entry(self.tc_frame)
+        # self.to_time_entry.pack(side="left")
+
+        # From Timecode
+        self.from_time_label = tk.Label(self.tc_frame, text="From Timecode:")
+        self.from_time_label.pack(side="left")
+        self.from_time_hh = tk.Spinbox(self.tc_frame, from_=0, to=23, width=2, format='%02.0f')
+        self.from_time_hh.pack(side="left")
+        self.from_time_mm = tk.Spinbox(self.tc_frame, from_=0, to=59, width=2, format='%02.0f')
+        self.from_time_mm.pack(side="left")
+        self.from_time_ss = tk.Spinbox(self.tc_frame, from_=0, to=59, width=2, format='%02.0f')
+        self.from_time_ss.pack(side="left")
+        self.from_time_ff = tk.Spinbox(self.tc_frame, from_=0, to=29, width=2, format='%02.0f')
+        self.from_time_ff.pack(side="left")
+
+        # To Timecode
+        self.to_time_label = tk.Label(self.tc_frame, text="To Timecode:")
+        self.to_time_label.pack(side="left")
+        self.to_time_hh = tk.Spinbox(self.tc_frame, from_=0, to=23, width=2, format='%02.0f')
+        self.to_time_hh.pack(side="left")
+        self.to_time_mm = tk.Spinbox(self.tc_frame, from_=0, to=59, width=2, format='%02.0f')
+        self.to_time_mm.pack(side="left")
+        self.to_time_ss = tk.Spinbox(self.tc_frame, from_=0, to=59, width=2, format='%02.0f')
+        self.to_time_ss.pack(side="left")
+        self.to_time_ff = tk.Spinbox(self.tc_frame, from_=0, to=29, width=2, format='%02.0f')
+        self.to_time_ff.pack(side="left")
+
+        # CSV Options Frame
+
+        self.csv_options_frame = tk.Frame(self, padx=20, pady=20)
+        self.csv_options_frame.pack(anchor="w", fill="x", expand=True)
+
+        # CSV Options
 
         self.csv_downsample_label = tk.Label(self.csv_options_frame, text="CSV Downsample:")
         self.csv_downsample_label.pack(side="left")
@@ -214,12 +269,12 @@ class Application(tk.Frame):
         self.csv_downsample_entry.pack(side="left")
         self.csv_downsample_entry.insert(0, "0")
 
-        # Export KML
-        self.export_kml_button = tk.Button(self, text="Export KML", command=self.export_kml, state="disabled")
-        self.export_kml_button.pack(side="left")
+        # KML Options Frame
 
-        self.kml_options_frame = tk.Frame(self)
-        self.kml_options_frame.pack(side="left")
+        self.kml_options_frame = tk.Frame(self, padx=20, pady=20)
+        self.kml_options_frame.pack(anchor="w")
+
+        #KML Options
 
         self.kml_downsample_label = tk.Label(self.kml_options_frame, text="KML Downsample:")
         self.kml_downsample_label.pack(side="left")
@@ -227,11 +282,22 @@ class Application(tk.Frame):
         self.kml_downsample_entry.pack(side="left")
         self.kml_downsample_entry.insert(0, "0")
 
-        # Filter Keys
-        self.filter_keys_frame = tk.Frame(self)
-        self.filter_keys_frame.pack(side="left")
+        self.kml_placemark_var = tk.BooleanVar()
+        self.kml_placemark_var.set(True)
+        self.kml_placemark_checkbutton = tk.Checkbutton(self.kml_options_frame, text="Add Placemarks", variable=self.kml_placemark_var)
+        self.kml_placemark_checkbutton.pack(side="left")
 
-        self.filter_keys_label = tk.Label(self.filter_keys_frame, text="Filter Keys:")
+        self.placemark_downsample_label = tk.Label(self.kml_options_frame, text="Placemark Downsample:")
+        self.placemark_downsample_label.pack(side="left")
+        self.placemark_downsample_entry = tk.Entry(self.kml_options_frame, width=6)
+        self.placemark_downsample_entry.pack(side="left")
+        self.placemark_downsample_entry.insert(0, "0")
+
+        # Filter Keys
+        self.filter_keys_frame = tk.Frame(self, padx=20, pady=20, background="#AAA")
+        self.filter_keys_frame.pack(anchor="w", fill="x", expand=True)
+
+        self.filter_keys_label = tk.Label(self.filter_keys_frame, text="Filter Keys:", background="#AAA")
         self.filter_keys_label.pack()
 
         self.filter_keys_checkbuttons = {}
@@ -290,7 +356,9 @@ class Application(tk.Frame):
         keys = set()
         for entry in self.json_data:
             keys.update(entry.keys())
-        keys.discard('tc')
+
+        #keys.discard('tc')
+
         keys = sorted(keys)
 
         for key in keys:
@@ -312,11 +380,15 @@ class Application(tk.Frame):
         for widget in self.filter_keys_frame.winfo_children():
             widget.destroy()
         row = 0
-        for key in keys:
-            cb = tk.Checkbutton(self.filter_keys_frame, text=key, variable=self.filter_keys_vars[key])
-            cb.grid(row=row, column=0, sticky="w")
+        col = 0
+        for i, key in enumerate(keys):
+            cb = tk.Checkbutton(self.filter_keys_frame, text=key, variable=self.filter_keys_vars[key], background="#AAA")
+            cb.grid(row=row, column=col, sticky="w")
             self.filter_keys_checkbuttons[key] = cb
             row += 1
+            if (i + 1) % 4 == 0:
+                col += 1
+                row = 0
 
         messagebox.showinfo("Data Refreshed", "Dataset refreshed.")
 
@@ -330,10 +402,26 @@ class Application(tk.Frame):
 
         csv_file = filedialog.asksaveasfilename(defaultextension=".csv")
         if csv_file:
-            from_time = self.from_time_entry.get()
-            to_time = self.to_time_entry.get()
+            #from_time = self.from_time_entry.get()
+            #to_time = self.to_time_entry.get()
+
+            from_time = f"{self.from_time_hh.get()}:{self.from_time_mm.get()}:{self.from_time_ss.get()}:{self.from_time_ff.get()}"
+            to_time = f"{self.to_time_hh.get()}:{self.to_time_mm.get()}:{self.to_time_ss.get()}:{self.to_time_ff.get()}"
+
+            if (from_time == "00:00:00:00"):
+                from_time = ""
+
+            if (to_time == "00:00:00:00"):
+                to_time = ""
+
             filtered_data = filter_data(combined_json, from_time, to_time)
-            write_json_to_csv(filtered_data, csv_file, downsample=0)
+
+            # Get the list of keys to include based on the filter
+            keys_to_include = [key for key in filtered_data[0].keys() if self.filter_keys_vars[key].get()]
+
+            write_json_to_csv(filtered_data, csv_file, downsample=int(self.csv_downsample_entry.get()),
+                              keys_to_include=keys_to_include)
+
             messagebox.showinfo("CSV Exported", f"CSV file exported to: {csv_file}")
 
     def export_kml(self):
