@@ -1,9 +1,7 @@
-import argparse
 import json
 import gzip
 import os
 import csv
-from datetime import datetime
 from fastkml import kml, styles
 from fastkml.geometry import LineString, Point
 from pathlib import Path
@@ -142,12 +140,11 @@ class Application(tk.Frame):
     def __init__(self, master=None):
         super().__init__(master)
         self.master = master
-        self.master.minsize(640, 360)
         self.master.title("TelemLogger-Explorer")
         self.grid(sticky="nsew")
         self.create_widgets()
 
-        #self.help()
+        self.help()
 
         self.json_data = []
 
@@ -155,11 +152,11 @@ class Application(tk.Frame):
         # Instructions
         self.instructions_text = """Instructions:
 
-                1) Click 'Select Folder' to choose a folder containing DLOG files.
+                1) Click 'Select Folder' to choose a folder containing *.dlog files.
 
-                2) Click 'Unzip Files' to extract the DLOG files from any GZ archives in the selected folder.
+                2) Click 'Unzip Files' to extract the *.dlog files from any GZ archives in the selected folder.
 
-                3) Click 'Refresh Data' to load the data from the DLOG files in the selected folder.
+                3) Click 'Refresh Data' to load the data from the *.dlog files in the selected folder.
 
                 4) Use the checkboxes to filter the data that will be exported to CSV and KML files.
 
@@ -178,7 +175,7 @@ class Application(tk.Frame):
 
         # Show Help Button
         self.help_button = tk.Button(self.buttons, text="Help", command=self.help)
-        self.help_button.pack(side="left")
+        self.help_button.pack(side="right")
 
         # Select Folder Button
         self.select_folder_button = tk.Button(self.buttons, text="Select Folder", command=self.select_folder)
@@ -357,8 +354,6 @@ class Application(tk.Frame):
         for entry in self.json_data:
             keys.update(entry.keys())
 
-        #keys.discard('tc')
-
         keys = sorted(keys)
 
         for key in keys:
@@ -368,7 +363,7 @@ class Application(tk.Frame):
         # Display first and last timecodes if "tc" exists in the dataset
         timecodes = [entry['tc'] for entry in combined_json if 'tc' in entry]
         if timecodes:
-            self.tc_info_label.config(text=f"First TC: {timecodes[0]}, Last TC: {timecodes[-1]}")
+            self.tc_info_label.config(text=f"First TC: {timecodes[0]} - Last TC: {timecodes[-1]}")
         else:
             self.tc_info_label.config(text="No timecode data in dataset")
 
